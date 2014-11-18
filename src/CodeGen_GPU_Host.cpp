@@ -266,7 +266,7 @@ void CodeGen_GPU_Host<CodeGen_CPU>::compile(Stmt stmt, string name,
     debug(1) << "Target triple of initial module: " << module->getTargetTriple() << "\n";
 
     // Pass to the generic codegen
-    CodeGen::compile(stmt, name, args, images_to_embed);
+    CodeGen_CPU::compile(stmt, name, args, images_to_embed);
 
     // Unset constant flag for embedded image global variables
     for (size_t i = 0; i < images_to_embed.size(); i++) {
@@ -300,7 +300,7 @@ void CodeGen_GPU_Host<CodeGen_CPU>::compile(Stmt stmt, string name,
     builder->CreateBr(entry);
 
     // Optimize the module
-    CodeGen::optimize_module();
+    CodeGen_CPU::optimize_module();
 }
 
 template<typename CodeGen_CPU>

@@ -425,34 +425,89 @@ llvm::Triple CodeGen_ARM::get_target_triple() const {
     return triple;
 }
 
-void CodeGen_ARM::compile(Stmt stmt, string name,
-                          const vector<Argument> &args,
-                          const vector<Buffer> &images_to_embed) {
-
-    init_module();
-
-    module = get_initial_module_for_target(target, context);
-
-    if (target.has_feature(Target::JIT)) {
-        std::vector<JITModule> shared_runtime = JITSharedRuntime::get(this, target);
-
-        JITModule::make_externs(shared_runtime, module);
+Value *CodeGen_ARM::call_intrin(Type result_type, const string &name, vector<Expr> args) {
+    vector<Value *> arg_values(args.size());
+    for (size_t i = 0; i < args.size(); i++) {
+        arg_values[i] = codegen(args[i]);
     }
 
-    // Fix the target triple.
-    debug(1) << "Target triple of initial module: " << module->getTargetTriple() << "\n";
-
-    llvm::Triple triple = get_target_triple();
-    module->setTargetTriple(triple.str());
-
-    debug(1) << "Target triple of initial module: " << module->getTargetTriple() << "\n";
-
-    // Pass to the generic codegen
-    CodeGen_Posix::compile(stmt, name, args, images_to_embed);
-
-    // Optimize
-    CodeGen_Posix::optimize_module();
+    return call_intrin(llvm_type_of(result_type), name, arg_values);
 }
+
+Value *CodeGen_ARM::call_intrin(llvm::Type *result_type,
+                                const string &name,
+                                vector<Value *> arg_values) {
+    // AArch64 shouldn't yet be calling here
+    internal_assert(target.bits == 32);
+
+    vector<llvm::Type *> arg_types(arg_values.size());
+    for (size_t i = 0; i < arg_values.size(); i++) {
+        arg_types[i] = arg_values[i]->getType();
+    }
+
+    llvm::Function *fn = module->getFunction("llvm.arm.neon." + name);
+
+    if (!fn) {
+        FunctionType *func_t = FunctionType::get(result_type, arg_types, false);
+        fn = llvm::Function::Create(func_t,
+                                    llvm::Function::ExternalLinkage,
+                                    "llvm.arm.neon." + name, module);
+        fn->setCallingConv(CallingConv::C);
+
+        if (starts_with(name, "vld")) {
+            fn->setOnlyReadsMemory();
+            fn->setDoesNotCapture(1);
+        } else {
+            fn->setDoesNotAccessMemory();
+        }
+        fn->setDoesNotThrow();
+
+    }
+
+    debug(4) << "Creating call to " << name << "\n";
+
+    return builder->CreateCall(fn, arg_values, name);
+
+}
+
+Instruction *CodeGen_ARM::call_void_intrin(const string &name, vector<Expr> args) {
+    vector<Value *> arg_values(args.size());
+    for (size_t i = 0; i < args.size(); i++) {
+        arg_values[i] = codegen(args[i]);
+    }
+
+    return call_void_intrin(name, arg_values);
+}
+
+
+Instruction *CodeGen_ARM::call_void_intrin(const string &name, vector<Value *> arg_values) {
+    // AArch64 shouldn't yet be calling here
+    internal_assert(target.bits == 32);
+
+    vector<llvm::Type *> arg_types(arg_values.size());
+    for (size_t i = 0; i < arg_values.size(); i++) {
+        arg_types[i] = arg_values[i]->getType();
+    }
+
+    llvm::Function *fn = module->getFunction("llvm.arm.neon." + name);
+
+    if (!fn) {
+        FunctionType *func_t = FunctionType::get(void_t, arg_types, false);
+        fn = llvm::Function::Create(func_t,
+                                    llvm::Function::ExternalLinkage,
+                                    "llvm.arm.neon." + name, module);
+        fn->setCallingConv(CallingConv::C);
+
+        if (starts_with(name, "vst")) {
+            fn->setDoesNotCapture(1);
+        }
+        fn->setDoesNotThrow();
+    }
+
+    debug(4) << "Creating call to " << name << "\n";
+    return builder->CreateCall(fn, arg_values);
+}
+
 
 namespace {
 
@@ -825,6 +880,10 @@ void CodeGen_ARM::visit(const Div *op) {
         value = val;
 
     } else {
+<<<<<<< HEAD
+=======
+
+>>>>>>> Checkpoint renaming/refactoring of CodeGen classes to better reflect
         CodeGen_Posix::visit(op);
     }
 }
@@ -974,7 +1033,6 @@ void CodeGen_ARM::visit(const Max *op) {
         if (op->type.is_vector() && patterns[i].t.width * patterns[i].t.bits == 128) {
             match = match || (op->type.element_of() == patterns[i].t.element_of());
         }
-
         if (match) {
             value = call_intrin(op->type, patterns[i].t.width, patterns[i].op, vec(op->a, op->b));
             return;
@@ -983,7 +1041,6 @@ void CodeGen_ARM::visit(const Max *op) {
 
     CodeGen_Posix::visit(op);
 }
-
 
 void CodeGen_ARM::visit(const Store *op) {
     // AArch64 SIMD not yet supported

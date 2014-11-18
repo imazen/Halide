@@ -220,7 +220,6 @@ SOURCE_FILES = \
   Buffer.cpp \
   CodeGen_ARM.cpp \
   CodeGen_C.cpp \
-  CodeGen.cpp \
   CodeGen_GPU_Dev.cpp \
   CodeGen_GPU_Host.cpp \
   CodeGen_Internal.cpp \
@@ -316,7 +315,6 @@ HEADER_FILES = \
   CodeGen_C.h \
   CodeGen_GPU_Dev.h \
   CodeGen_GPU_Host.h \
-  CodeGen.h \
   CodeGen_MIPS.h \
   CodeGen_OpenCL_Dev.h \
   CodeGen_OpenGL_Dev.h \
