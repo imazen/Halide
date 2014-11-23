@@ -262,6 +262,7 @@ SOURCE_FILES = \
   JITModule.cpp \
   Lerp.cpp \
   LinearSolve.cpp \
+  LLVM_Runtime_Linker.cpp \
   Lower.cpp \
   Memoization.cpp \
   ModulusRemainder.cpp \
@@ -357,6 +358,7 @@ HEADER_FILES = \
   Lambda.h \
   Lerp.h \
   LinearSolve.h \
+  LLVM_Runtime_Linker.h \
   Lower.h \
   MainPage.h \
   Memoization.h \
