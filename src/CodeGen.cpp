@@ -376,26 +376,26 @@ void CodeGen::optimize_module() {
     #if LLVM_VERSION >= 36
     internal_assert(module->getDataLayout()) << "Optimizing module with no data layout, probably will crash in LLVM.\n";
     module_pass_manager.add(new DataLayoutPass());
+    function_pass_manager.add(new DataLayoutPass());
     #endif
-
-    // Make sure things marked as always-inline get inlined
-    module_pass_manager.add(createAlwaysInlinerPass());
 
     PassManagerBuilder b;
     b.OptLevel = 3;
+    b.LibraryInfo = new TargetLibraryInfo(Triple(module->getTargetTriple()));
+    // Make sure things marked as always-inline get inlined
+    b.Inliner = createAlwaysInlinerPass();
+
     b.populateFunctionPassManager(function_pass_manager);
     b.populateModulePassManager(module_pass_manager);
 
     // Run optimization passes
-    module_pass_manager.run(*module);
-    if (!function_name.empty()) {
-        llvm::Function *fn = module->getFunction(function_name);
-        internal_assert(fn) << "Could not find function " << function_name << " inside llvm module\n";
-
-        function_pass_manager.doInitialization();
+    function_pass_manager.doInitialization();
+    for (Module::iterator fn = module->begin(); fn != module->end(); fn++) {
         function_pass_manager.run(*fn);
-        function_pass_manager.doFinalization();
     }
+    function_pass_manager.doFinalization();
+
+    module_pass_manager.run(*module);
 
     if (debug::debug_level >= 2) {
         module->dump();
