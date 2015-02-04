@@ -383,11 +383,8 @@ WEAK void halide_release(void *user_context) {
     int err;
     CUcontext ctx;
     err = halide_acquire_cuda_context(user_context, &ctx, false);
-    if (err != CUDA_SUCCESS) {
-        return;
-    }
 
-    if (ctx) {
+    if (err == CUDA_SUCCESS && ctx) {
         // It's possible that this is being called from the destructor of
         // a static variable, in which case the driver may already be
         // shutting down.

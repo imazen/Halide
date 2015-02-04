@@ -549,11 +549,8 @@ WEAK void halide_release(void *user_context) {
     cl_context ctx;
     cl_command_queue q;
     err = halide_acquire_cl_context(user_context, &ctx, &q, false);
-    if (err != 0) {
-        return;
-    }
 
-    if (ctx) {
+    if (err == CL_SUCCESS && ctx) {
         err = clFinish(q);
         halide_assert(user_context, err == CL_SUCCESS);
 
