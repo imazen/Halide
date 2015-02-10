@@ -10,9 +10,6 @@ using std::vector;
 using Internal::vec;
 
 namespace {
-
-
-namespace {
 llvm::Module *parse_bitcode_file(llvm::StringRef buf, llvm::LLVMContext *context, const char *id) {
 
     #if LLVM_VERSION >= 36
@@ -566,5 +563,7 @@ llvm::Module *get_initial_module_for_ptx_device(Target target, llvm::LLVMContext
     return modules[0];
 }
 #endif
+
+}
 
 }

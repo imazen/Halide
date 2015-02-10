@@ -153,6 +153,18 @@ CodeGen_LLVM::CodeGen_LLVM(Target t) :
     wild_f32x8(Variable::make(Float(32, 8), "*")),
     wild_f64x4(Variable::make(Float(64, 4), "*")),
 
+    wild_u1x_ (Variable::make(UInt(1, -1), "*")),
+    wild_i8x_ (Variable::make(Int(8, -1), "*")),
+    wild_u8x_ (Variable::make(UInt(8, -1), "*")),
+    wild_i16x_(Variable::make(Int(16, -1), "*")),
+    wild_u16x_(Variable::make(UInt(16, -1), "*")),
+    wild_i32x_(Variable::make(Int(32, -1), "*")),
+    wild_u32x_(Variable::make(UInt(32, -1), "*")),
+    wild_i64x_(Variable::make(Int(64, -1), "*")),
+    wild_u64x_(Variable::make(UInt(64, -1), "*")),
+    wild_f32x_(Variable::make(Float(32, -1), "*")),
+    wild_f64x_(Variable::make(Float(64, -1), "*")),
+
     // Bounds of types
     min_i8(Int(8).min()),
     max_i8(Int(8).max()),
@@ -178,17 +190,7 @@ CodeGen_LLVM::CodeGen_LLVM(Target t) :
     initialize_llvm();
 }
 
-void CodeGen_LLVM::jit_finalize(llvm::ExecutionEngine *ee, llvm::Module *module,
-                           std::vector<JITCompiledModule::CleanupRoutine> *cleanup_routines) {
-    // If the module contains a memoization cache cleanup function, run it when the module dies.
-    llvm::Function *fn = module->getFunction("halide_memoization_cache_cleanup");
-    if (fn) {
-        void *f = ee->getPointerToFunction(fn);
-        internal_assert(f) << "Could not find compiled form of halide_memoization_cache_release in module\n";
-        void (*cleanup_routine)(void *) =
-            reinterpret_bits<void (*)(void *)>(f);
-        cleanup_routines->push_back(JITCompiledModule::CleanupRoutine(cleanup_routine, NULL));
-    }
+void CodeGen_LLVM::jit_finalize(llvm::ExecutionEngine *ee, llvm::Module *module) {
 }
 
 void CodeGen_LLVM::initialize_llvm() {
@@ -2751,7 +2753,7 @@ Value *CodeGen_LLVM::get_user_context() const {
 }
 
 
-Value *CodeGen::call_intrin(Type result_type, int intrin_vector_width,
+Value *CodeGen_LLVM::call_intrin(Type result_type, int intrin_vector_width,
                             const string &name, vector<Expr> args) {
     vector<Value *> arg_values(args.size());
     for (size_t i = 0; i < args.size(); i++) {
@@ -2763,7 +2765,7 @@ Value *CodeGen::call_intrin(Type result_type, int intrin_vector_width,
                        name, arg_values);
 }
 
-Value *CodeGen::call_intrin(llvm::Type *result_type, int intrin_vector_width,
+Value *CodeGen_LLVM::call_intrin(llvm::Type *result_type, int intrin_vector_width,
                             const string &name, vector<Value *> arg_values) {
     int arg_vector_width = (int)result_type->getVectorNumElements();
 
@@ -2813,7 +2815,7 @@ Value *CodeGen::call_intrin(llvm::Type *result_type, int intrin_vector_width,
     return call;
 }
 
-Value *CodeGen::slice_vector(Value *vec, int start, int size) {
+Value *CodeGen_LLVM::slice_vector(Value *vec, int start, int size) {
     int vec_lanes = vec->getType()->getVectorNumElements();
 
     if (start == 0 && size == vec_lanes) {
@@ -2834,7 +2836,7 @@ Value *CodeGen::slice_vector(Value *vec, int start, int size) {
     return builder->CreateShuffleVector(vec, undefs, indices_vec);
 }
 
-Value *CodeGen::concat_vectors(const vector<Value *> &v) {
+Value *CodeGen_LLVM::concat_vectors(const vector<Value *> &v) {
     if (v.size() == 1) return v[0];
 
     internal_assert(!v.empty());
@@ -2887,7 +2889,7 @@ Value *CodeGen::concat_vectors(const vector<Value *> &v) {
     return vecs[0];
 }
 
-std::pair<llvm::Function *, int> CodeGen::find_vector_runtime_function(const std::string &name, int width) {
+std::pair<llvm::Function *, int> CodeGen_LLVM::find_vector_runtime_function(const std::string &name, int width) {
     // Check if a vector version of the function already
     // exists at some useful width. We use the naming
     // convention that a N-wide version of a function foo is

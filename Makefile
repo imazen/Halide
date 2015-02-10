@@ -210,7 +210,6 @@ DISTRIB_DIR=distrib
 endif
 
 FILTERS_DIR = $(BUILD_DIR)/filters
-<<<<<<< HEAD
 SOURCE_FILES = \
   AllocationBoundsInference.cpp \
   BlockFlattening.cpp \
@@ -225,6 +224,7 @@ SOURCE_FILES = \
   CodeGen_GPU_Dev.cpp \
   CodeGen_GPU_Host.cpp \
   CodeGen_Internal.cpp \
+  CodeGen_LLVM.cpp \
   CodeGen_MIPS.cpp \
   CodeGen_OpenCL_Dev.cpp \
   CodeGen_OpenGL_Dev.cpp \

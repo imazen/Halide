@@ -388,7 +388,7 @@ void CodeGen_GPU_Host<CodeGen_CPU>::visit(const For *loop) {
             }
         }
 
-        Value *null_float_ptr = ConstantPointerNull::get(CodeGen::f32->getPointerTo());
+        Value *null_float_ptr = ConstantPointerNull::get(CodeGen_LLVM::f32->getPointerTo());
         Value *zero_int32 = codegen(Expr(cast<int>(0)));
 
         Value *gpu_num_padded_attributes  = zero_int32;
@@ -414,7 +414,7 @@ void CodeGen_GPU_Host<CodeGen_CPU>::visit(const For *loop) {
             // right type
             gpu_vertex_buffer = codegen(Variable::make(Handle(), "glsl.vertex_buffer.host"));
             gpu_vertex_buffer = builder->CreatePointerCast(gpu_vertex_buffer,
-                                                           CodeGen::f32->getPointerTo());
+                                                           CodeGen_LLVM::f32->getPointerTo());
 
         }
 

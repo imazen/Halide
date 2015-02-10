@@ -367,8 +367,4 @@ std::string Target::to_string() const {
   return result;
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> Factor LLVM dependency out of Target.h,cpp files.
 }

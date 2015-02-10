@@ -269,7 +269,7 @@ void CodeGen_X86::visit(const EQ *op) {
     int bits = t.width * t.bits;
     if (t.width == 1 || bits % 128 == 0) {
         // LLVM is fine for native vector widths or scalars
-        CodeGen::visit(op);
+        CodeGen_Posix::visit(op);
     } else {
         // Non-native vector widths get legalized poorly by llvm. We
         // split it up ourselves.
@@ -599,7 +599,7 @@ void CodeGen_X86::visit(const Div *op) {
 
 void CodeGen_X86::visit(const Min *op) {
     if (!op->type.is_vector()) {
-        CodeGen::visit(op);
+        CodeGen_Posix::visit(op);
         return;
     }
 
@@ -638,7 +638,7 @@ void CodeGen_X86::visit(const Min *op) {
 
 void CodeGen_X86::visit(const Max *op) {
     if (!op->type.is_vector()) {
-        CodeGen::visit(op);
+        CodeGen_Posix::visit(op);
         return;
     }
 

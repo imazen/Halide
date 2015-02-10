@@ -425,90 +425,6 @@ llvm::Triple CodeGen_ARM::get_target_triple() const {
     return triple;
 }
 
-Value *CodeGen_ARM::call_intrin(Type result_type, const string &name, vector<Expr> args) {
-    vector<Value *> arg_values(args.size());
-    for (size_t i = 0; i < args.size(); i++) {
-        arg_values[i] = codegen(args[i]);
-    }
-
-    return call_intrin(llvm_type_of(result_type), name, arg_values);
-}
-
-Value *CodeGen_ARM::call_intrin(llvm::Type *result_type,
-                                const string &name,
-                                vector<Value *> arg_values) {
-    // AArch64 shouldn't yet be calling here
-    internal_assert(target.bits == 32);
-
-    vector<llvm::Type *> arg_types(arg_values.size());
-    for (size_t i = 0; i < arg_values.size(); i++) {
-        arg_types[i] = arg_values[i]->getType();
-    }
-
-    llvm::Function *fn = module->getFunction("llvm.arm.neon." + name);
-
-    if (!fn) {
-        FunctionType *func_t = FunctionType::get(result_type, arg_types, false);
-        fn = llvm::Function::Create(func_t,
-                                    llvm::Function::ExternalLinkage,
-                                    "llvm.arm.neon." + name, module);
-        fn->setCallingConv(CallingConv::C);
-
-        if (starts_with(name, "vld")) {
-            fn->setOnlyReadsMemory();
-            fn->setDoesNotCapture(1);
-        } else {
-            fn->setDoesNotAccessMemory();
-        }
-        fn->setDoesNotThrow();
-
-    }
-
-    debug(4) << "Creating call to " << name << "\n";
-
-    return builder->CreateCall(fn, arg_values, name);
-
-}
-
-Instruction *CodeGen_ARM::call_void_intrin(const string &name, vector<Expr> args) {
-    vector<Value *> arg_values(args.size());
-    for (size_t i = 0; i < args.size(); i++) {
-        arg_values[i] = codegen(args[i]);
-    }
-
-    return call_void_intrin(name, arg_values);
-}
-
-
-Instruction *CodeGen_ARM::call_void_intrin(const string &name, vector<Value *> arg_values) {
-    // AArch64 shouldn't yet be calling here
-    internal_assert(target.bits == 32);
-
-    vector<llvm::Type *> arg_types(arg_values.size());
-    for (size_t i = 0; i < arg_values.size(); i++) {
-        arg_types[i] = arg_values[i]->getType();
-    }
-
-    llvm::Function *fn = module->getFunction("llvm.arm.neon." + name);
-
-    if (!fn) {
-        FunctionType *func_t = FunctionType::get(void_t, arg_types, false);
-        fn = llvm::Function::Create(func_t,
-                                    llvm::Function::ExternalLinkage,
-                                    "llvm.arm.neon." + name, module);
-        fn->setCallingConv(CallingConv::C);
-
-        if (starts_with(name, "vst")) {
-            fn->setDoesNotCapture(1);
-        }
-        fn->setDoesNotThrow();
-    }
-
-    debug(4) << "Creating call to " << name << "\n";
-    return builder->CreateCall(fn, arg_values);
-}
-
-
 namespace {
 
 // Try to losslessly narrow an integer expression to the target type
@@ -880,10 +796,6 @@ void CodeGen_ARM::visit(const Div *op) {
         value = val;
 
     } else {
-<<<<<<< HEAD
-=======
-
->>>>>>> Checkpoint renaming/refactoring of CodeGen classes to better reflect
         CodeGen_Posix::visit(op);
     }
 }
