@@ -4,11 +4,11 @@ cache:
  - 'C:\llvm'
 
 environment:
+  project_root: 'C:\Code\Halide'
+  llvm_root: 'C:\llvm'
+  clang_root: 'C:\llvm\tools\clang'
 
   matrix:
-    project_root: 'C:\Code\Halide'
-    llvm_root: 'C:\llvm'
-    clang_root: 'C:\llvm\tools\clang'
 
     - arch: "x86"
       llvm_build_dir: "build-32"
