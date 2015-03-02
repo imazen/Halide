@@ -1,5 +1,5 @@
 shallow_clone: true
-clone_folder: "C:\Code\Halide"
+clone_folder: 'C:\Code\Halide'
 
 environment:
 
