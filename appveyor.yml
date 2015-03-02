@@ -20,7 +20,7 @@ environment:
       d: "64_trunk"
 
 install:
-  - ps: >
+  - ps: |
         $ErrorActionPreference = "Continue"
         # Add the relevant tools to the path
         $env:PATH += ";C:\Program Files (x86)\Subversion\bin"
@@ -50,7 +50,7 @@ install:
 
  
 build_script: 
-  -ps:  >
+  -ps:  |
         $lp = $env:llvm_path
         #
         foreach (${configuration} in "Release", "Debug") {
@@ -69,7 +69,7 @@ build_script:
         }
 
 test_script: 
-  - ps: >
+  - ps: |
         $d = $env:d
         $env:HL_JIT_TARGET = "host"
         #
