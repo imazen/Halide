@@ -20,7 +20,8 @@ environment:
       d: "64_trunk"
 
 install:
-  - ps: $ErrorActionPreference = "Continue"
+  - ps: >
+        $ErrorActionPreference = "Continue"
         # Add the relevant tools to the path
         $env:PATH += ";C:\Program Files (x86)\Subversion\bin"
         $env:PATH += ";C:\Program Files (x86)\CMake\bin"
@@ -49,7 +50,8 @@ install:
 
  
 build_script: 
-  -ps:  $lp = $env:llvm_path
+  -ps:  >
+        $lp = $env:llvm_path
         #
         foreach (${configuration} in "Release", "Debug") {
           # Build Halide
@@ -67,7 +69,8 @@ build_script:
         }
 
 test_script: 
-  - ps: $d = $env:d
+  - ps: >
+        $d = $env:d
         $env:HL_JIT_TARGET = "host"
         #
         cd ${ROOT}\build_${d}_Release\bin\Release
