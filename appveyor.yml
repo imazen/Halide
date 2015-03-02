@@ -39,13 +39,13 @@ install:
         #
         # Get llvm via Git (faster)
         if (! (Test-Path $env:llvm_root)) {
-          git clone http://llvm.org/git/llvm.git $env:llvm_root -depth 10
+          git clone http://llvm.org/git/llvm.git $env:llvm_root --depth 10
         } else {
           cd $env:llvm_root
           git pull
         }
         if (! (Test-Path $env:clang_root)) {
-          git clone http://llvm.org/git/clang.git $env:clang_root -depth 10
+          git clone http://llvm.org/git/clang.git $env:clang_root --depth 10
         } else {
           cd $env:clang_root
           git pull
