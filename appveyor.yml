@@ -1,9 +1,15 @@
 shallow_clone: true
 clone_folder: 'C:\Code\Halide'
+cache:
+ - 'C:\llvm'
 
 environment:
 
   matrix:
+    project_root: 'C:\Code\Halide'
+    llvm_root: 'C:\llvm'
+    clang_root: 'C:\llvm\tools\clang'
+
     - arch: "x86"
       llvm_build_dir: "build-32"
       cmake_target: ' -G "Visual Studio 12" '
@@ -21,6 +27,7 @@ environment:
 
 install:
   - ps: |
+        $env:llvm_path = "$env:llvm_root\$llvm_build_dir"
         $ErrorActionPreference = "Continue"
         # Add the relevant tools to the path
         $env:PATH += ";C:\Program Files (x86)\Subversion\bin"
@@ -29,28 +36,36 @@ install:
         $env:PATH += ";C:\Program Files (x86)\Git\bin"
         $env:PATH += ";C:\Program Files (x86)\7-Zip"
         $env:PATH += ";C:\Program Files (x86)\MSBuild\12.0\bin"
-        # Get llvm
-        svn co http://llvm.org/svn/llvm-project/llvm/trunk $ROOT\llvm
-        svn co http://llvm.org/svn/llvm-project/cfe/trunk $ROOT\llvm\tools\clang
-        # Set metadata
-        $COMMIT = git show HEAD | head -n1 | cut -b8-
-        $DATE = date +%Y_%m_%d
         #
-        # Build latest llvm
-        cd $ROOT\llvm
+        # Get llvm via Git (faster)
+        if (! (Test-Path $env:llvm_root)) {
+          git clone http://llvm.org/git/llvm.git $env:llvm_root -depth 10
+        } else {
+          cd $env:llvm_root
+          git pull
+        }
+        if (! (Test-Path $env:clang_root)) {
+          git clone http://llvm.org/git/clang.git $env:clang_root -depth 10
+        } else {
+          cd $env:clang_root
+          git pull
+        }
+        #
+        # Build latest llvm - but let's skip if it is cached already
+        cd $env:llvm_root
         if (! (Test-Path $env:llvm_build_dir)) {
           mkdir $env:llvm_build_dir
-        }
-        cd $env:llvm_build_dir
-        cmake -D LLVM_ENABLE_TERMINFO=OFF -D LLVM_TARGETS_TO_BUILD='X86;ARM;NVPTX;AArch64;Mips' -D LLVM_ENABLE_ASSERTIONS=ON $env:llvm_build_flags $env:cmake_target ..
-        MSBuild.exe /m /t:Build /p:Configuration="Debug" .\ALL_BUILD.vcxproj
-        MSBuild.exe /m /t:Build /p:Configuration="Release" .\ALL_BUILD.vcxproj
-        #
-        $env:llvm_path = "$ROOT\llvm\$llvm_build_dir"
-
+          # } #uncomment to rebuild clang every time
+          cd $env:llvm_build_dir
+          cmake -D LLVM_ENABLE_TERMINFO=OFF -D LLVM_TARGETS_TO_BUILD='X86;ARM;NVPTX;AArch64;Mips' -D LLVM_ENABLE_ASSERTIONS=ON $env:llvm_build_flags $env:cmake_target ..
+          MSBuild.exe /m /t:Build /p:Configuration="Debug" .\ALL_BUILD.vcxproj
+          MSBuild.exe /m /t:Build /p:Configuration="Release" .\ALL_BUILD.vcxproj
+        } # Comment out to rebuild clang every time
+          
  
 build_script: 
   -ps:  |
+        $ROOT = $env:project_root
         $lp = $env:llvm_path
         #
         foreach (${configuration} in "Release", "Debug") {
@@ -70,6 +85,10 @@ build_script:
 
 test_script: 
   - ps: |
+        $ROOT = $env:project_root
+        # Set metadata
+        $COMMIT = git show HEAD | head -n1 | cut -b8-
+        $DATE = date +%Y_%m_%d
         $d = $env:d
         $env:HL_JIT_TARGET = "host"
         #
