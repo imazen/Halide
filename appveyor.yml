@@ -1,0 +1,177 @@
+shallow_clone: true
+clone_folder: "C:\Code\Halide"
+
+environment:
+
+  matrix:
+    - arch: "x86"
+      llvm_build_dir: "build-32"
+      cmake_target: ' -G "Visual Studio 12" '
+      llvm_build_flags: ' -D LLVM_BUILD_32_BITS=ON -G "Visual Studio 12" '
+      halide_build_dir: "build_32"
+      d: "32_trunk"
+
+
+    - arch: "x64"
+      llvm_build_dir: "build-64"
+      cmake_target: ' -G "Visual Studio 12  Win64" '
+      llvm_build_flags: ' -G "Visual Studio 12 Win64" '
+      halide_build_dir: "build_64"
+      d: "64_trunk"
+
+install:
+  - ps: 
+    $ErrorActionPreference = "Continue"
+
+    # Add the relevant tools to the path
+    $env:PATH += ";C:\Program Files (x86)\Subversion\bin"
+    $env:PATH += ";C:\Program Files (x86)\CMake\bin"
+    $env:PATH += ";C:\Program Files (x86)\CMake 2.8\bin"
+    $env:PATH += ";C:\Program Files (x86)\Git\bin"
+    $env:PATH += ";C:\Program Files (x86)\7-Zip"
+    $env:PATH += ";C:\Program Files (x86)\MSBuild\12.0\bin"
+
+    # Get llvm
+    svn co http://llvm.org/svn/llvm-project/llvm/trunk $ROOT\llvm
+    svn co http://llvm.org/svn/llvm-project/cfe/trunk $ROOT\llvm\tools\clang
+
+
+    $COMMIT = git show HEAD | head -n1 | cut -b8-
+    $DATE = date +%Y_%m_%d
+
+    # Build latest llvm
+    cd $ROOT\llvm
+    if (! (Test-Path $env:llvm_build_dir)) {
+      mkdir $env:llvm_build_dir
+    }
+    cd $env:llvm_build_dir
+    cmake -D LLVM_ENABLE_TERMINFO=OFF -D LLVM_TARGETS_TO_BUILD='X86;ARM;NVPTX;AArch64;Mips' -D LLVM_ENABLE_ASSERTIONS=ON $env:llvm_build_flags $env:cmake_target ..
+    MSBuild.exe /m /t:Build /p:Configuration="Debug" .\ALL_BUILD.vcxproj
+    MSBuild.exe /m /t:Build /p:Configuration="Release" .\ALL_BUILD.vcxproj
+
+    $env:llvm_path = "$ROOT\llvm\$llvm_build_dir"
+
+ 
+build_script: 
+  -ps: 
+
+    $lp = $env:llvm_path
+
+    foreach (${configuration} in "Release", "Debug") {
+
+      # Build Halide
+      cd $ROOT
+      if (! (Test-Path ${env:halide_build_dir}_trunk_${configuration})) {
+        mkdir ${env:halide_build_dir}_trunk_${configuration}
+      }
+      cd ${env:halide_build_dir}_trunk_${configuration}
+      cmake -D LLVM_BIN=$lp\Release\bin -D LLVM_INCLUDE="$ROOT\llvm\include;$lp\include" -D LLVM_LIB=$lp\${configuration}\lib -D LLVM_VERSION=37 -D TARGET_ARM=ON -D TARGET_NATIVE_CLIENT=OFF -D TARGET_OPENCL=ON -D TARGET_PTX=ON -D TARGET_SPIR=ON -D TARGET_X86=ON -D WITH_TEST_CORRECTNESS=ON -D WITH_TEST_ERROR=ON -D WITH_TEST_WARNING=ON -D WITH_TEST_PERFORMANCE=ON -D WITH_TEST_STATIC=ON -D WITH_TEST_GENERATORS=ON -D HALIDE_SHARED_LIBRARY=ON -D BUILD_TYPE="${configuration}" $env:cmake_target ..
+      MSBuild.exe /m /t:Build /p:Configuration="${configuration}" .\All_BUILD.vcxproj
+      if ($LastExitCode) {
+        echo "Build failed!"
+        exit $LastExitCode
+      }
+    }
+
+test_script: 
+  - ps: 
+    $d = $env:d
+
+
+    $env:HL_JIT_TARGET = "host"
+
+    cd ${ROOT}\build_${d}_Release\bin\Release
+
+    Get-ChildItem . -filter correctness*.exe | ForEach {
+      echo ""
+      echo $_.Fullname
+      &$_.Fullname
+      if ($LastExitCode) {
+        echo "Test failed!"
+        exit $LastExitCode
+      }
+    }
+
+    Get-ChildItem . -filter performance*.exe | ForEach {
+      echo ""
+      echo $_.Fullname
+      &$_.Fullname
+      if ($LastExitCode) {
+        echo "Test failed!"
+    #      exit $LastExitCode
+      }
+    }
+
+    # GPU and static tests
+    if ($d.EndsWith("trunk")) {
+      Get-ChildItem . -filter static*.exe | ForEach {
+        echo ""
+        echo $_.Fullname
+        &$_.Fullname
+        if ($LastExitCode) {
+          echo "Test failed!"
+          exit $LastExitCode
+        }
+      }
+
+      Get-ChildItem . -filter exec_test_*.exe | ForEach {
+        echo ""
+        echo $_.Fullname
+        &$_.Fullname
+        if ($LastExitCode) {
+          echo "Test failed!"
+          exit $LastExitCode
+        }
+      }
+
+
+      Get-ChildItem . -filter correctness*.exe | ForEach {
+        echo ""
+        echo $_.Fullname
+        $env:HL_JIT_TARGET = "cuda"
+        &$_.Fullname
+        if ($LastExitCode) {
+          echo "Test failed with cuda!"
+          exit $LastExitCode
+        }
+        $env:HL_JIT_TARGET = "opencl"
+        &$_.Fullname
+        if ($LastExitCode) {
+          echo "Test failed with opencl!"
+          exit $LastExitCode
+        }
+      }
+    }
+
+    cd $ROOT
+    if (! (Test-Path distrib)) {
+      mkdir distrib
+    }
+    cd distrib
+    
+    $DISTRIB_DIR = "distrib_${d}_${COMMIT}_${DATE}"
+    if (Test-Path $DISTRIB_DIR) {
+      rm $DISTRIB_DIR -r -Force
+    }
+    mkdir $DISTRIB_DIR
+    cd $DISTRIB_DIR
+    
+    mkdir include
+    mkdir Release
+    mkdir Debug
+
+    cp $ROOT\build_${d}_Release\include\Halide.h include\
+    cp $ROOT\src\runtime\HalideRuntim*.h include\
+    cp $ROOT\build_${d}_Release\lib\Release\Halide.lib Release\
+    cp $ROOT\build_${d}_Release\bin\Release\Halide.dll Release\
+    cp $ROOT\build_${d}_Debug\lib\Debug\Halide.lib Debug\
+    cp $ROOT\build_${d}_Debug\bin\Debug\Halide.dll Debug\
+    cp $ROOT\README.md .
+    &7z a Halide_Windows_${d}_${COMMIT}_${DATE}.zip *
+    mv Halide_Windows_${d}_${COMMIT}_${DATE}.zip ..
+      
+    cd ..
+
+    Push-AppveyorArtifact Halide_Windows_${d}_${COMMIT}_${DATE}.zip
+
+
